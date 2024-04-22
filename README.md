@@ -40,7 +40,7 @@ This Python script optimizes fund transfers between a parent company and its sub
     poetry run python main.py
     ```
 
-3. Access the transfer schedule and bank transfer schedule DataFrames for further analysis or processing.
+3. Access the `company_transfer.csv` and `bank_transfer.csv` for transaction log files for further analysis or processing.
 
 ## Test Cases
 
