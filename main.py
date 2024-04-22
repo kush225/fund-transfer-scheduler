@@ -1,12 +1,16 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import pandas as pd
 from typing import Dict, List
 from config import start_date,  bank_limits_data, invoices_data
 
-
 bank_limits = pd.DataFrame(bank_limits_data)
 bank_limits.fillna(0, inplace=True)
 invoices = pd.DataFrame(invoices_data)
+
+# Initialize company transfer log and bank transfer log
+company_transfer_log = pd.DataFrame(columns=invoices_data['Company'])
+bank_transfer_log = pd.DataFrame(columns=["Bank 1", "Bank 2", "Bank 3", "Bank 4"]) 
+save_transactions = True
 
 def transfer(invoices: pd.DataFrame,
              data: Dict[str, int], 
@@ -17,14 +21,14 @@ def transfer(invoices: pd.DataFrame,
     Perform fund transfer for invoices based on the available bank limit.
     
     Args:
-        invoices (pd.Datafram): Dataframe object representing the invoices data
+        invoices (pd.DataFrame): Dataframe object representing the invoices data
         data (Dict[str, int]): Dictionary containing company names and their transferred amounts.
         limit (int): Available transfer limit for the bank.
         bank_transfered (List[int]): List to store transfer amounts for the current bank.
         total_transferred (int): Total amount transferred across all banks.
         
     Returns:
-        total_transferred (int)
+        total_transferred (int): Total amount transferred across all banks.
     """
     for idx, row in invoices.iterrows():
         company, amount = row['Company'], row['Amount']
@@ -42,25 +46,33 @@ def transfer(invoices: pd.DataFrame,
 
     return total_transferred 
 
-def transfer_funds(start_date: datetime, invoices: pd.DataFrame, bank_limits: pd.DataFrame):
+def transfer_funds(start_date: datetime, invoices: pd.DataFrame, bank_limits: pd.DataFrame) -> date:
+    """
+    Perform fund transfers for invoices across multiple banks until all invoices are paid.
+    
+    Args:
+        start_date (datetime): The start date for fund transfers.
+        invoices (pd.DataFrame): Dataframe object representing the invoices data.
+        bank_limits (pd.DataFrame): Dataframe object representing the bank limits data.
+        
+    Returns:
+        completion_date (date): The completion date when all invoices are paid.
+    """
     total_transferred: int = 0
-    # Initialize company transfer log and bank transfer log
-    company_transfer_log = pd.DataFrame(columns=invoices_data['Company'])
-    bank_transfer_log = pd.DataFrame(columns=["Bank 1", "Bank 2", "Bank 3", "Bank 4"]) 
 
     # Loop until all invoices are paid
     while invoices['Amount'].sum() > 0:
         # Determine the column to use for bank limits based on the current date
-        column: str = 'weekday' if start_date.weekday() < 5 else 'weekend'
+        weekday_type: str = 'weekday' if start_date.weekday() < 5 else 'weekend'
         # Sort banks by the available limit in descending order
-        bank_limits.sort_values(by=column, ascending=False, inplace=True)
+        bank_limits.sort_values(by=weekday_type, ascending=False, inplace=True)
         data: Dict[str, int] = {}
         bank_data: Dict[str, int] = {}
         
         # Iterate over banks to transfer funds
         for bank_name, limit in bank_limits.iterrows():
             bank_transfered: List[int] = []
-            limit: int = limit[column]
+            limit: int = limit[weekday_type]
             
             # Perform fund transfer
             total_transferred += transfer(invoices, data, limit, bank_transfered)
@@ -84,23 +96,35 @@ def transfer_funds(start_date: datetime, invoices: pd.DataFrame, bank_limits: pd
         bank_transfer_log.loc[start_date.date()] = bank_data
         start_date += timedelta(days=1)
 
+    completion_date = company_transfer_log.index[-1]
+    
+    return completion_date
 
-    return (bank_transfer_log, company_transfer_log)
 
 def main():
-    # Do the transfer
-    bank_transfer_log, company_transfer_log = transfer_funds(start_date, invoices, bank_limits)
+    completion_date = transfer_funds(start_date, invoices, bank_limits)
+
+    # saving transaction logs
+    if save_transactions:
+        company_transfer_log.reset_index(inplace=True)
+        company_transfer_log.rename(columns={'index': 'completion_date'},inplace=True)
+        company_transfer_log.to_csv('company_transfer.csv', index=False)
+
+        bank_transfer_log.reset_index(inplace=True)
+        bank_transfer_log.rename(columns={'index': 'completion_date'},inplace=True)
+        bank_transfer_log.to_csv('bank_transfer.csv', index=False)
 
     # Print the final results
-    print("Invoice Job Startdate:", start_date.date() )
-    print("\n")
-    print("###Bank Transfer details")
-    print(bank_transfer_log)
-    print("\n")
-    print("###Company Transfer details\n")
-    print(company_transfer_log)
-    print("\n")
-    print("Invoice Job Enddate:", company_transfer_log.index[-1] )
+    # print("Invoice Job Startdate:", start_date.date() )
+    # print("\n")
+    # print("###Bank Transfer details")
+    # print(bank_transfer_log)
+    # print("\n")
+    # print("###Company Transfer details\n")
+    # print(company_transfer_log)
+    # print("\n")
+
+    print("Invoice Job Completion date:", completion_date ) 
 
 
 if __name__ == "__main__":

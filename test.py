@@ -11,8 +11,7 @@ class TestPrime(unittest.TestCase):
             # Extract input data
             bank_limits_data = data['bank_limits_data']
             invoices_data = data['invoices_data']
-            expected_company_transfer_data = data['expected_company_transfer_data']
-            expected_bank_transfer_data = data['expected_bank_transfer_data']
+            expected_completion_date = datetime.strptime(data['completion_date'], '%Y-%m-%d')
             start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
 
             # Convert input data to DataFrames
@@ -21,22 +20,10 @@ class TestPrime(unittest.TestCase):
             invoices = pd.DataFrame(invoices_data)
 
             # Call the function to transfer funds
-            bank_log_schedule, company_log_schedule = transfer_funds(start_date, invoices, bank_limits )
+            actual_completion_date = transfer_funds(start_date, invoices, bank_limits )
 
-            bank_log_schedule.fillna(0, inplace=True)
-            company_log_schedule.fillna(0, inplace=True) 
-            
-            index_labels = {start_date + timedelta(days=x): x for x in range(6)}
-
-            # Create the DataFrame with expected transfer schedule data and indexed by dates
-            expected_company_log_df = pd.DataFrame(data=expected_company_transfer_data, index=index_labels, dtype=float)
-            expected_bank_log_df = pd.DataFrame(data=expected_bank_transfer_data, index=index_labels, dtype=float)
-
-            # Compare actual results with expected results
-            assert company_log_schedule.equals(expected_company_log_df)  
-            assert bank_log_schedule.equals(expected_bank_log_df) 
+            assert expected_completion_date.date() == actual_completion_date
             assert invoices['Amount'].sum() == 0 
-
 
 if __name__=='__main__':
 	unittest.main()
