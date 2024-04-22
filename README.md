@@ -4,7 +4,7 @@ This Python script optimizes fund transfers between a parent company and its sub
 
 ## Requirements
 
-- Python 3.x
+- Python 3.8
 - [Poetry](https://python-poetry.org/)
 
 ## Installation
