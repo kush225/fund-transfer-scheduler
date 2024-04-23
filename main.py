@@ -79,16 +79,18 @@ def transfer_funds(start_date: datetime, invoices: pd.DataFrame, bank_limits: pd
             bank_data[bank_name] = bank_data.get(bank_name, 0 ) + sum(bank_transfered)
 
         # use instant_wiring_weekday if bank limit is reached and amount to transfer is remaining
-        for bank_name, limit in bank_limits.iterrows():
-            bank_transfered: List[int] = []
-            limit: int = limit["instant_wiring_weekday"]
 
-            if not limit:
-                continue
-            
-            # Perform fund transfer
-            total_transferred += transfer(invoices, data, limit, bank_transfered)
-            bank_data[bank_name] = bank_data.get(bank_name, 0 ) + sum(bank_transfered)
+        if weekday_type == "weekday":
+            for bank_name, limit in bank_limits.iterrows():
+                bank_transfered: List[int] = []
+                limit: int = limit["instant_wiring_weekday"]
+
+                if not limit:
+                    continue
+                
+                # Perform fund transfer
+                total_transferred += transfer(invoices, data, limit, bank_transfered)
+                bank_data[bank_name] = bank_data.get(bank_name, 0 ) + sum(bank_transfered)
 
             
         # Update transfer and bank transfer schedule
